@@ -21,8 +21,10 @@ public class LanguageAnalyzer {
         if (dictionary.isEmpty()) {
             return 0;
         }
+
         int textLength = text.length();
         int score = 0;
+        System.out.print("Found words: ");
         for (int i = 0; i < textLength;) {
             boolean wordFound = false;
             for (int j = Math.min(i+20,textLength); j>= i + 4; j--) { // Ищем слова длиной от 3 символов
