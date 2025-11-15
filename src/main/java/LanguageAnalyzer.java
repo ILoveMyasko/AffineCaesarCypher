@@ -5,7 +5,10 @@ import java.util.*;
 
 public class LanguageAnalyzer {
     private final Set<String> dictionary;
-    private final Map<String, List<String>> memoCache;
+    private final Map<String, SegmentationResult> memoCache;
+
+    private static final int DICTIONARY_WORD_PENALTY = 1;
+    private static final int UNKNOWN_CHAR_PENALTY = 100;
 
     public LanguageAnalyzer(String dictionaryPath) {
         dictionary = new HashSet<>();
@@ -56,18 +59,10 @@ public class LanguageAnalyzer {
         if (text == null || text.isEmpty()) {
             return "";
         }
-
-        // Очищаем кэш перед каждым новым вызовом, если объект используется многократно
         memoCache.clear();
 
-        List<String> words = segment(text);
-
-        if (words != null) {
-            return String.join(" ", words);
-        } else {
-            System.out.println("Couldn't manage to add spaces");
-            return text;
-        }
+        SegmentationResult result = segment(text);
+        return String.join(" ", result.words);
     }
 
     /**
@@ -75,46 +70,67 @@ public class LanguageAnalyzer {
      * @param text Оставшаяся часть текста для разбиения.
      * @return Список слов или null, если разбиение невозможно.
      */
-    private List<String> segment(String text) {
+    private SegmentationResult segment(String text) {
         if (text.isEmpty()) {
-            return new ArrayList<>(); // Возвращаем пустой список как маркер успеха.
+            return new SegmentationResult(new ArrayList<>(), 0);
         }
-
-        // Перед выполнением дорогостоящих вычислений проверяем, не решали ли мы уже эту подзадачу.
         if (memoCache.containsKey(text)) {
             return memoCache.get(text);
         }
 
+        SegmentationResult bestResult = null;
         // Backtracking
         // Идем от самого длинного возможного слова к самому короткому.
-        for (int i = text.length(); i >= 1; i--) {
+        for (int i = 1; i <= text.length(); i++) {
             String prefix = text.substring(0, i);
             if (dictionary.contains(prefix)) {
                 String suffix = text.substring(i);
-                List<String> suffixResult = segment(suffix);
-                if (suffixResult != null) {
-                    List<String> solution = new ArrayList<>();
-                    solution.add(prefix);
-                    solution.addAll(suffixResult);
-                    memoCache.put(text, solution);
-                    return solution;
-                }
+                SegmentationResult suffixResult = segment(suffix);
+
+                bestResult = getBetterResult(bestResult, prefix, suffixResult, DICTIONARY_WORD_PENALTY);
             }
         }
 
+        //Рассчитываем вариант с пропуском одного символа
         String unknownChar = text.substring(0, 1);
         String restOfText = text.substring(1);
+        SegmentationResult restResult = segment(restOfText);
+        // Сравниваем лучший результат из цикла (если он был) с результатом пропуска символа.
+        bestResult = getBetterResult(bestResult, unknownChar, restResult, UNKNOWN_CHAR_PENALTY);
 
-        List<String> restResult = segment(restOfText);
-
-        List<String> solution = new ArrayList<>();
-        solution.add(unknownChar); // Добавляем наш "неизвестный" символ
-        solution.addAll(restResult);
-
-        memoCache.put(text, solution);
-        return solution;
+        memoCache.put(text, bestResult);
+        return bestResult;
     }
 
+    /**
+     * Сравнивает текущий лучший результат с новым кандидатом и возвращает лучший из них.
+     * Этот метод помогает избежать дублирования кода.
+     *
+     * @param currentBest Текущий лучший результат (может быть null).
+     * @param newFirstWord Первое слово нового варианта разбиения.
+     * @param suffixResult Результат разбиения для остальной части строки.
+     * @param wordPenalty Штраф за newFirstWord.
+     * @return Новый лучший результат (либо currentBest, либо новый созданный).
+     */
+    private SegmentationResult getBetterResult(SegmentationResult currentBest,
+                                               String newFirstWord,
+                                               SegmentationResult suffixResult,
+                                               int wordPenalty) {
+
+        int newPenalty = wordPenalty + suffixResult.penalty;
+
+        // Если текущего лучшего результата еще нет, или новый вариант "дешевле",
+        // то новый вариант становится лучшим.
+        if (currentBest == null || newPenalty < currentBest.penalty) {
+            List<String> newWords = new ArrayList<>();
+            newWords.add(newFirstWord);
+            newWords.addAll(suffixResult.words);
+            return new SegmentationResult(newWords, newPenalty);
+        }
+
+        // В противном случае, оставляем прежний лучший результат.
+        return currentBest;
+    }
 
 
 }
