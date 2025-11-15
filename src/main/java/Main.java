@@ -9,8 +9,9 @@ public class Main {
     final private static String inputFileName = "input.txt";
     final private static String encryptedFileName = "encrypted.txt";
     final private static String decryptedFileName = "decrypted.txt";
-    final private static String dictionaryFileName = "dictionary.txt";
+    final private static String dictionaryFileName = "russian.dic";
     final private static String bruteForceFileName = "bruteforce.txt";
+    final private static String spacesAddedFileName = "spaces.txt";
     public static void main(String[] args) {
 
         Scanner scanner = new Scanner(System.in);
@@ -44,6 +45,9 @@ public class Main {
                     System.out.println("Exiting program...");
                     scanner.close();
                     return;
+                }
+                case 5: {
+                    handleAddingSpaces();
                 }
             }
         }
@@ -121,12 +125,27 @@ public class Main {
             System.err.println("Error during brute-force attack! Details: " + e.getMessage());
         }
     }
+    private static void handleAddingSpaces()
+    {
+        LanguageAnalyzer analyzer = new LanguageAnalyzer(dictionaryFileName);
+        try {
+            String decryptedText = Files.readString(Paths.get(decryptedFileName));
+            String spacesInsertedText = analyzer.addSpaces(decryptedText);
+            Files.writeString(Paths.get(spacesAddedFileName), spacesInsertedText);
+        }
+        catch (IOException e) {
+            System.err.println("\nAn error occurred during file operation!");
+        }
+
+    }
+
     private static void printMenu() {
         System.out.println("\n--- MAIN MENU ---");
         System.out.println("1. Encrypt");
         System.out.println("2. Decrypt");
         System.out.println("3. Brute Force Attack");
         System.out.println("4. Exit");
+        System.out.println("5. Add spaces");
         System.out.print("Enter your choice: ");
     }
 
