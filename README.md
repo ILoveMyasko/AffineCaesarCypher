@@ -1,0 +1,2 @@
+The program implements Affine Caesar ciphering and deciphering tool. It is also able to brute-force encoded strings and add spaces to decoded text.
+The program uses russian alphabet and a dictionary took from https://dikmax.name/post/russian-dictionary
